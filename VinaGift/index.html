@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vina Gift Marketplace</title>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -39,10 +40,8 @@
   <button id="connect-wallet-btn">Kết nối ví TON</button>
   <div id="wallet-info"></div>
 
-  <script type="module">
-    import { TonConnectUI } from "https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js";
-
-    const tonConnectUI = new TonConnectUI({
+  <script>
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
     });
 
