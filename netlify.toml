@@ -5,4 +5,9 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com;"
+
+[[redirects]]
+  from = "/*"
+  to = "/miniapp.html"
+  status = 200
