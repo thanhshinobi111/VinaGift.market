@@ -1,6 +1,7 @@
 [build]
   publish = "VinaGift"
   functions = "functions"
+  command = "npm install"
 
 [[headers]]
   for = "/tonconnect-manifest.json"
