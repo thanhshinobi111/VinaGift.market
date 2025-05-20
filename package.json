@@ -2,9 +2,7 @@
   "name": "vinagift-project",
   "version": "1.0.0",
   "description": "Vina Gift Marketplace project with TON SDK",
-  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "build": "vite build"
   },
   "author": "shinobi",
