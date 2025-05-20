@@ -1,5 +1,6 @@
 // Vinagift/miniapp.js
-document.addEventListener("DOMContentLoaded", () => {
+
+document.addEventListener("DOMContentLoaded", async () => {
   const Telegram = window.Telegram.WebApp;
   Telegram.ready();
   const userId = Telegram.initDataUnsafe.user ? Telegram.initDataUnsafe.user.id : null;
@@ -7,47 +8,80 @@ document.addEventListener("DOMContentLoaded", () => {
   const NETLIFY_DOMAIN = "https://vinagift.netlify.app";
 
   const connectButton = document.getElementById("connect-wallet-btn");
-  connectButton.addEventListener("click", () => {
-    const state = Math.random().toString(36).substring(2);
-    const clientId = Date.now().toString(36); // Tạo client ID
-    const connectLink = `https://app.tonkeeper.com/ton-connect?manifestUrl=${NETLIFY_DOMAIN}/tonconnect-manifest.json&returnUrl=${NETLIFY_DOMAIN}/.netlify/functions/ton-connect-callback&state=${state}&id=${clientId}`;
-    console.log("Opening TON Connect link:", connectLink);
-    window.location.href = connectLink;
+  const walletInfo = document.getElementById("wallet-info");
+  const connector = new TonConnectUI.TonConnectUI({
+    manifestUrl: `${NETLIFY_DOMAIN}/tonconnect-manifest.json`
   });
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const address = urlParams.get("address");
-  if (address) {
-    document.getElementById("wallet-info").innerText = `Đã kết nối ví: ${address}`;
-    localStorage.setItem("walletAddress", address);
-    Telegram.MainButton.setText("Đóng").show().onClick(() => Telegram.close());
-    fetchWalletData(address);
-    fetchNFTsForSale(address);
-  } else {
-    const savedAddress = localStorage.getItem("walletAddress");
-    if (savedAddress) {
-      document.getElementById("wallet-info").innerText = `Đã kết nối ví: ${savedAddress}`;
-      fetchWalletData(savedAddress);
-      fetchNFTsForSale(savedAddress);
+  connectButton.addEventListener("click", async () => {
+    try {
+      const result = await connector.connectWallet({
+        universalLink: 'https://app.tonkeeper.com/ton-connect',
+        jsBridgeKey: 'tonkeeper',
+        requestProof: true
+      });
+
+      const { address, proof } = result.account;
+
+      if (!address || !proof) {
+        alert("Không nhận được địa chỉ hoặc proof từ ví.");
+        return;
+      }
+
+      const res = await fetch(`${NETLIFY_DOMAIN}/.netlify/functions/ton-connect-callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: address.bounceable, proof })
+      });
+
+      if (res.status === 302) {
+        const location = res.headers.get("Location");
+        window.location.href = location;
+        return;
+      }
+
+      const resData = await res.json();
+      if (resData.error) {
+        alert("Kết nối thất bại: " + resData.error);
+        return;
+      }
+
+      const walletAddress = address.bounceable;
+      localStorage.setItem("walletAddress", walletAddress);
+      walletInfo.innerText = `Đã kết nối ví: ${walletAddress}`;
+      Telegram.MainButton.setText("Đóng").show().onClick(() => Telegram.close());
+
+      fetchWalletData(walletAddress);
+      fetchNFTsForSale(walletAddress);
+    } catch (err) {
+      console.error("Lỗi khi kết nối ví:", err);
+      alert("Lỗi khi kết nối ví: " + err.message);
     }
+  });
+
+  const savedAddress = localStorage.getItem("walletAddress");
+  if (savedAddress) {
+    walletInfo.innerText = `Đã kết nối ví: ${savedAddress}`;
+    fetchWalletData(savedAddress);
+    fetchNFTsForSale(savedAddress);
   }
 
   async function fetchWalletData(address) {
     try {
-      const balanceResponse = await fetch(`${NETLIFY_DOMAIN}/.netlify/functions/get-balance`, {
+      const balanceRes = await fetch(`${NETLIFY_DOMAIN}/.netlify/functions/get-balance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address })
       });
-      const balanceData = await balanceResponse.json();
+      const balanceData = await balanceRes.json();
       const balance = balanceData.balance || "N/A";
 
-      const nftsResponse = await fetch(`${NETLIFY_DOMAIN}/.netlify/functions/get-nfts`, {
+      const nftsRes = await fetch(`${NETLIFY_DOMAIN}/.netlify/functions/get-nfts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address })
       });
-      const nftData = await nftsResponse.json();
+      const nftData = await nftsRes.json();
       const nfts = nftData.nfts || [];
 
       let nftHtml = `<div>Số dư TON: ${balance} TON</div><div>NFT trong ví của bạn:</div>`;
