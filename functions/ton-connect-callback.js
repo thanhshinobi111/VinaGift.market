@@ -1,18 +1,14 @@
 // functions/ton-connect-callback.js
-const { TonConnectServer } = require('@tonconnect/sdk');
+
+const { TonConnectServer } = require('@tonconnect/server');
 
 exports.handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
-    console.log("Request method:", event.httpMethod);
-    console.log("Request body:", event.body);
-    console.log("Query string parameters:", event.queryStringParameters);
-
-    // Cho phép GET để debug trên trình duyệt
     if (event.httpMethod === "GET") {
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: "This endpoint expects a POST request from TON Connect. Use POST with address and proof in body or query parameters." })
+        body: JSON.stringify({ message: "Use POST with address and proof in body." })
       };
     }
 
@@ -23,42 +19,21 @@ exports.handler = async (event) => {
       };
     }
 
-    // TON Connect có thể gửi dữ liệu qua query string hoặc body
-    let address, proof;
-    if (event.queryStringParameters) {
-      address = event.queryStringParameters.address;
-      proof = event.queryStringParameters.proof;
-    }
-
-    if (!address || !proof) {
-      if (!event.body) {
-        console.log("No body or query parameters provided in request");
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Request body or query parameters are empty" })
-        };
-      }
-
-      let body;
-      try {
-        body = JSON.parse(event.body);
-      } catch (parseError) {
-        console.log("Failed to parse body:", parseError);
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Invalid JSON in request body" })
-        };
-      }
-
-      address = body.address;
-      proof = body.proof;
-    }
-
-    if (!address || !proof) {
-      console.log("Missing address or proof in request:", { body: event.body, query: event.queryStringParameters });
+    let body;
+    try {
+      body = JSON.parse(event.body);
+    } catch (parseError) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing address or proof in request" })
+        body: JSON.stringify({ error: "Invalid JSON in request body" })
+      };
+    }
+
+    const { address, proof } = body;
+    if (!address || !proof) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing address or proof" })
       };
     }
 
@@ -68,13 +43,13 @@ exports.handler = async (event) => {
 
     const isValid = await tonConnect.verifyProof(proof);
     if (!isValid) {
-      console.log("Invalid proof:", proof);
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid proof' })
+        body: JSON.stringify({ error: "Invalid proof" })
       };
     }
 
+    // ✅ Nếu muốn redirect về Telegram bot
     return {
       statusCode: 302,
       headers: {
@@ -82,6 +57,12 @@ exports.handler = async (event) => {
       },
       body: ''
     };
+
+    // Hoặc trả về thông tin để xử lý tiếp tại client
+    // return {
+    //   statusCode: 200,
+    //   body: JSON.stringify({ success: true, address })
+    // };
   } catch (error) {
     console.error("Error in ton-connect-callback:", error);
     return {
