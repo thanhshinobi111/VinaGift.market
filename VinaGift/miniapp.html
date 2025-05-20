@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vina Gift Marketplace - Mini App</title>
+
+  <!-- SDK TonConnect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,7 +20,10 @@
       -moz-text-size-adjust: none;
       text-size-adjust: 100%;
     }
-    h1 { color: #333; font-size: 24px; }
+    h1 {
+      color: #333;
+      font-size: 24px;
+    }
     button {
       background-color: #04aaff;
       color: white;
@@ -27,23 +34,35 @@
       cursor: pointer;
       margin: 10px 0;
     }
-    button:hover { background-color: #028dd3; }
-    #wallet-info, #nft-list, #nfts-for-sale {
+    button:hover {
+      background-color: #028dd3;
+    }
+    #wallet-info,
+    #nft-list,
+    #nfts-for-sale {
       margin-top: 20px;
       font-weight: bold;
       color: #555;
       text-align: left;
     }
-    .nft-item { margin: 10px 0; }
-    .nft-item img { max-width: 100px; }
+    .nft-item {
+      margin: 10px 0;
+    }
+    .nft-item img {
+      max-width: 100px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <h1>Vina Gift Marketplace</h1>
   <button id="connect-wallet-btn">Kết nối ví TON</button>
+
   <div id="wallet-info"></div>
   <div id="nft-list"></div>
   <div id="nfts-for-sale"></div>
+
+  <!-- App logic -->
   <script src="./miniapp.js"></script>
 </body>
 </html>
