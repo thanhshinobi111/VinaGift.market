@@ -5,10 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vina Gift Marketplace - Mini App</title>
-
-  <!-- SDK TonConnect UI -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,11 +54,11 @@
   <h1>Vina Gift Marketplace</h1>
   <button id="connect-wallet-btn">Kết nối ví TON</button>
 
-  <div id="wallet-info"></div>
-  <div id="nft-list"></div>
-  <div id="nfts-for-sale"></div>
+  <div id="wallet-info">Disconnected</div>
+  <div id="nft-list">No NFTs loaded</div>
+  <div id="nfts-for-sale">No NFTs for sale</div>
 
   <!-- App logic -->
-  <script src="./miniapp.js"></script>
+  <script type="module" src="/miniapp.js"></script>
 </body>
 </html>
