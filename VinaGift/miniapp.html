@@ -1,0 +1,49 @@
+<!-- VinaGift/miniapp.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vina Gift Marketplace - Mini App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f3f3f3;
+      margin: 0;
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: none;
+      text-size-adjust: 100%;
+    }
+    h1 { color: #333; font-size: 24px; }
+    button {
+      background-color: #04aaff;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 0;
+    }
+    button:hover { background-color: #028dd3; }
+    #wallet-info, #nft-list, #nfts-for-sale {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #555;
+      text-align: left;
+    }
+    .nft-item { margin: 10px 0; }
+    .nft-item img { max-width: 100px; }
+  </style>
+</head>
+<body>
+  <h1>Vina Gift Marketplace</h1>
+  <button id="connect-wallet-btn">Kết nối ví TON</button>
+  <div id="wallet-info"></div>
+  <div id="nft-list"></div>
+  <div id="nfts-for-sale"></div>
+  <script src="./miniapp.js"></script>
+</body>
+</html>
