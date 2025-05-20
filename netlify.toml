@@ -2,10 +2,49 @@
   functions = "functions"
   publish = "VinaGift"
 
+# Cấu hình CORS cho tonconnect-manifest.json
+[[headers]]
+  for = "/tonconnect-manifest.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Content-Type = "application/json"
+
+# Cấu hình CSP
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagiftmarket.netlify.app https://*.mytonwallet.org https://tonhub.com;"
+
+# Redirect cho SPA, nhưng loại trừ các tài nguyên tĩnh và functions
+[[redirects]]
+  from = "/tonconnect-manifest.json"
+  to = "/tonconnect-manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/VinaGift.png"
+  to = "/VinaGift.png"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/terms.html"
+  to = "/terms.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/privacy.html"
+  to = "/privacy.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
