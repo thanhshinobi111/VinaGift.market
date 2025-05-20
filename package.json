@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@tonconnect/sdk": "^3.1.0",
+    "@tonconnect/server": "^0.0.7",
     "@ton/ton": "^13.0.0",
     "node-fetch": "^2.6.1",
     "mongodb": "^4.0.0"
