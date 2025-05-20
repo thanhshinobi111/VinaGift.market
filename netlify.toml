@@ -1,7 +1,7 @@
 [build]
   publish = "VinaGift"
   functions = "functions"
-  command = "npm install"
+  command = "npm install && npm run build" # Thêm lệnh build nếu cần
 
 [[headers]]
   for = "/tonconnect-manifest.json"
@@ -12,12 +12,43 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagiftmarket.netlify.app https://*.mytonwallet.org https://tonhub.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagift.netlify.app https://*.mytonwallet.org https://tonhub.com;"
+
+[[redirects]]
+  from = "/tonconnect-manifest.json"
+  to = "/tonconnect-manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/icon.png"
+  to = "/icon.png"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/terms.html"
+  to = "/terms.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/privacy.html"
+  to = "/privacy.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
