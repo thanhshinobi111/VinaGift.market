@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vina Gift Marketplace - Mini App</title>
+  <script src="https://unpkg.com/@tonconnect/ui@2.0.0/dist/tonconnect-ui.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -53,9 +54,131 @@
 <body>
   <h1>Vina Gift Marketplace</h1>
   <button id="connect-wallet-btn">Kết nối ví TON</button>
+  <button id="disconnect-wallet-btn" style="display: none;">Ngắt kết nối ví</button>
   <div id="wallet-info">Disconnected</div>
   <div id="nft-list">No NFTs loaded</div>
   <div id="nfts-for-sale">No NFTs for sale</div>
-  <script type="module" src="/miniapp.js"></script>
+
+  <script>
+    const tonConnectUI = new TONConnectUI({
+      manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
+      buttonRootId: 'connect-wallet-btn'
+    });
+
+    async function displayNFTs(walletAddress) {
+      try {
+        const response = await fetch('/api/db-connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: walletAddress })
+        });
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const data = await response.json();
+        const nfts = data.nfts || [];
+        const nftList = document.getElementById('nft-list');
+        const nftsForSale = document.getElementById('nfts-for-sale');
+        nftList.innerHTML = '';
+        nftsForSale.innerHTML = '';
+        if (nfts.length === 0) {
+          nftList.innerText = 'No NFTs found';
+          nftsForSale.innerText = 'No NFTs for sale';
+          return;
+        }
+        nfts.forEach(nft => {
+          const nftItem = document.createElement('div');
+          nftItem.className = 'nft-item';
+          nftItem.innerHTML = `
+            <img src="${nft.image || 'https://via.placeholder.com/100'}" alt="${nft.name || 'NFT'}">
+            <p>Name: ${nft.name || 'Unknown'}</p>
+            <p>Price: ${nft.price ? `${nft.price} TON` : 'Not for sale'}</p>
+          `;
+          if (nft.forSale) nftsForSale.appendChild(nftItem.cloneNode(true));
+          else nftList.appendChild(nftItem);
+        });
+      } catch (error) {
+        console.error('Error fetching NFTs:', error);
+        document.getElementById('nft-list').innerText = `Error loading NFTs: ${error.message}`;
+      }
+    }
+
+    async function connectWallet() {
+      try {
+        const wallet = await tonConnectUI.connectWallet();
+        console.log('Connected wallet:', wallet);
+        const address = wallet.account.address;
+        document.getElementById('wallet-info').innerText = `Connected: ${address}`;
+        await displayNFTs(address);
+      } catch (error) {
+        console.error('Connection error:', error);
+        document.getElementById('wallet-info').innerText = `Connection failed: ${error.message}`;
+      }
+    }
+
+    async function disconnectWallet() {
+      try {
+        await tonConnectUI.disconnect();
+        document.getElementById('wallet-info').innerText = 'Disconnected';
+        document.getElementById('nft-list').innerText = 'No NFTs loaded';
+        document.getElementById('nfts-for-sale').innerText = 'No NFTs for sale';
+      } catch (error) {
+        console.error('Disconnect error:', error);
+        document.getElementById('wallet-info').innerText = `Disconnect failed: ${error.message}`;
+      }
+    }
+
+    function initTelegramWebApp() {
+      if (window.Telegram?.WebApp) {
+        const webApp = window.Telegram.WebApp;
+        webApp.ready();
+        webApp.expand();
+        document.body.style.backgroundColor = webApp.themeParams.bg_color || '#f3f3f3';
+        document.querySelector('h1').style.color = webApp.themeParams.text_color || '#333';
+      }
+    }
+
+    async function init() {
+      try {
+        initTelegramWebApp();
+        const wallet = tonConnectUI.wallet;
+        if (wallet) {
+          document.getElementById('wallet-info').innerText = `Connected: ${wallet.account.address}`;
+          await displayNFTs(wallet.account.address);
+        }
+        tonConnectUI.onStatusChange(wallet => {
+          console.log('Wallet status:', wallet ? wallet : 'Disconnected');
+          const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+          const connectBtn = document.getElementById('connect-wallet-btn');
+          if (wallet) {
+            document.getElementById('wallet-info').innerText = `Connected: ${wallet.account.address}`;
+            disconnectBtn.style.display = 'block';
+            connectBtn.style.display = 'none';
+            displayNFTs(wallet.account.address);
+          } else {
+            document.getElementById('wallet-info').innerText = 'Disconnected';
+            disconnectBtn.style.display = 'none';
+            connectBtn.style.display = 'block';
+            document.getElementById('nft-list').innerText = 'No NFTs loaded';
+            document.getElementById('nfts-for-sale').innerText = 'No NFTs for sale';
+          }
+        });
+        const walletsList = await tonConnectUI.getWallets();
+        const isEmbedded = walletsList.some(wallet => wallet.embedded);
+        if (isEmbedded) {
+          console.log('Detected embedded wallet in Telegram Mini App');
+          const embeddedWallet = walletsList.find(wallet => wallet.embedded);
+          await tonConnectUI.connect({ jsBridgeKey: embeddedWallet.jsBridgeKey });
+        } else {
+          console.log('Running in web environment');
+          document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
+          document.getElementById('disconnect-wallet-btn').addEventListener('click', disconnectWallet);
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        document.getElementById('wallet-info').innerText = `Init error: ${error.message}`;
+      }
+    }
+
+    window.onload = init;
+  </script>
 </body>
 </html>
