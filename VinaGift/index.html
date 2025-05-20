@@ -3,14 +3,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Vina Gift Marketplace</title>
-<button id="connect-wallet-btn" onclick="window.location.href='https://app.tonkeeper.com/ton-connect?v=2&manifestUrl=https://vinagift.netlify.app/tonconnect-manifest.json&returnUrl=https://vinagift.netlify.app/.netlify/functions/ton-connect-callback'">Kết nối ví TON</button>  <style>
+
+  <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 50px;
       background: #f3f3f3;
+      -webkit-text-size-adjust: 100%; /* Cho Chrome, Edge */
+      -moz-text-size-adjust: none;    /* Cho Firefox */
+      text-size-adjust: 100%;         /* Chuẩn tương lai */
     }
     h1 {
       color: #333;
@@ -36,24 +40,23 @@
 </head>
 <body>
   <h1>Welcome to Vina Gift Marketplace</h1>
-  <button id="connect-wallet-btn">Kết nối ví TON</button>
+  <button id="connect-wallet-btn" onclick="connectWallet()">Kết nối ví TON</button>
   <div id="wallet-info"></div>
 
   <script>
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
-    });
+    function connectWallet() {
+      const connectLink = "https://app.tonkeeper.com/ton-connect?v=2&manifestUrl=https://vinagift.netlify.app/tonconnect-manifest.json&returnUrl=https://vinagift.netlify.app/.netlify/functions/ton-connect-callback";
+      window.location.href = connectLink;
+    }
 
-    document.getElementById("connect-wallet-btn").addEventListener("click", async () => {
-      const connectedWallet = await tonConnectUI.connectWallet();
-      if (connectedWallet) {
-        document.getElementById("wallet-info").innerText =
-          "Đã kết nối ví: " + connectedWallet.account.address;
-      } else {
-        document.getElementById("wallet-info").innerText = "Chưa kết nối.";
+    // Xử lý callback từ TON Connect (nếu cần hiển thị địa chỉ ví sau khi kết nối)
+    window.addEventListener("load", async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const address = urlParams.get("address"); // Giả sử ton-connect-callback trả về address qua query param
+      if (address) {
+        document.getElementById("wallet-info").innerText = "Đã kết nối ví: " + address;
       }
     });
   </script>
 </body>
 </html>
-
