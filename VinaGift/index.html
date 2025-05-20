@@ -3,22 +3,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vina Gift Marketplace</title>
-
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 50px;
       background: #f3f3f3;
-      -webkit-text-size-adjust: 100%; /* Cho Chrome, Edge */
-      -moz-text-size-adjust: none;    /* Cho Firefox */
-      text-size-adjust: 100%;         /* Chuẩn tương lai */
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: none;
+      text-size-adjust: 100%;
     }
-    h1 {
-      color: #333;
-    }
+    h1 { color: #333; }
     button {
       background-color: #04aaff;
       color: white;
@@ -28,9 +25,7 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #028dd3;
-    }
+    button:hover { background-color: #028dd3; }
     #wallet-info {
       margin-top: 20px;
       font-weight: bold;
@@ -40,23 +35,8 @@
 </head>
 <body>
   <h1>Welcome to Vina Gift Marketplace</h1>
-  <button id="connect-wallet-btn" onclick="connectWallet()">Kết nối ví TON</button>
+  <button id="connect-wallet-btn">Kết nối ví TON</button>
   <div id="wallet-info"></div>
-
-  <script>
-    function connectWallet() {
-      const connectLink = "https://app.tonkeeper.com/ton-connect?v=2&manifestUrl=https://vinagift.netlify.app/tonconnect-manifest.json&returnUrl=https://vinagift.netlify.app/.netlify/functions/ton-connect-callback";
-      window.location.href = connectLink;
-    }
-
-    // Xử lý callback từ TON Connect (nếu cần hiển thị địa chỉ ví sau khi kết nối)
-    window.addEventListener("load", async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const address = urlParams.get("address"); // Giả sử ton-connect-callback trả về address qua query param
-      if (address) {
-        document.getElementById("wallet-info").innerText = "Đã kết nối ví: " + address;
-      }
-    });
-  </script>
+  <script src="/script.js"></script>
 </body>
 </html>
