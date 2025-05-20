@@ -1,0 +1,59 @@
+<!-- VinaGift/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vina Gift Marketplace</title>
+<button id="connect-wallet-btn" onclick="window.location.href='https://app.tonkeeper.com/ton-connect?v=2&manifestUrl=https://vinagift.netlify.app/tonconnect-manifest.json&returnUrl=https://vinagift.netlify.app/.netlify/functions/ton-connect-callback'">Kết nối ví TON</button>  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #f3f3f3;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      background-color: #04aaff;
+      color: white;
+      padding: 15px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #028dd3;
+    }
+    #wallet-info {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Vina Gift Marketplace</h1>
+  <button id="connect-wallet-btn">Kết nối ví TON</button>
+  <div id="wallet-info"></div>
+
+  <script>
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
+    });
+
+    document.getElementById("connect-wallet-btn").addEventListener("click", async () => {
+      const connectedWallet = await tonConnectUI.connectWallet();
+      if (connectedWallet) {
+        document.getElementById("wallet-info").innerText =
+          "Đã kết nối ví: " + connectedWallet.account.address;
+      } else {
+        document.getElementById("wallet-info").innerText = "Chưa kết nối.";
+      }
+    });
+  </script>
+</body>
+</html>
+
