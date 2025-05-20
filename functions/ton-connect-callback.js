@@ -4,7 +4,6 @@ exports.handler = async (event) => {
   try {
     console.log('Received event:', JSON.stringify(event, null, 2));
 
-    // Kiểm tra phương thức GET (TON Connect sử dụng GET với query tc)
     if (event.httpMethod !== 'GET') {
       return {
         statusCode: 405,
@@ -14,7 +13,6 @@ exports.handler = async (event) => {
 
     const query = event.queryStringParameters || {};
 
-    // Kiểm tra query parameter tc
     if (!query.tc) {
       return {
         statusCode: 400,
@@ -22,7 +20,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Giải mã dữ liệu tc
     let connectData;
     try {
       connectData = JSON.parse(decodeURIComponent(query.tc));
@@ -33,12 +30,10 @@ exports.handler = async (event) => {
       };
     }
 
-    // Khởi tạo TonConnect
     const tonConnect = new TonConnect({
       manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json'
     });
 
-    // Khôi phục kết nối ví
     const walletInfo = await tonConnect.restoreConnection();
     if (!walletInfo) {
       return {
@@ -47,7 +42,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Xác minh tonProof nếu có
     if (connectData.tonProof) {
       const isValid = await tonConnect.verifyTonProof(connectData.tonProof);
       if (!isValid) {
@@ -58,7 +52,6 @@ exports.handler = async (event) => {
       }
     }
 
-    // Redirect về Telegram bot với địa chỉ ví
     const address = walletInfo.account.address;
     return {
       statusCode: 302,
