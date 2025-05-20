@@ -1,8 +1,8 @@
 {
-  "url": "https://vinagiftmarket.netlify.app",
+  "url": "https://vinagift.netlify.app/",
   "name": "Vina Gift Marketplace",
   "description": "Made in Vietnam.",
-  "iconUrl": "https://vinagiftmarket.netlify.app/VinaGift.png",
-  "termsOfUseUrl": "https://vinagiftmarket.netlify.app/terms.html",
-  "privacyPolicyUrl": "https://vinagiftmarket.netlify.app/privacy.html"
+  "iconUrl": "https://vinagift.netlify.app/VinaGift.png",
+  "termsOfUseUrl": "https://vinagift.netlify.app/terms.html",
+  "privacyPolicyUrl": "https://vinagift.netlify.app/privacy.html"
 }
