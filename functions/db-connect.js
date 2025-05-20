@@ -3,12 +3,20 @@ const { connectDB, closeDB } = require("../utils/db");
 exports.handler = async (event) => {
   try {
     const db = await connectDB();
-    const collections = await db.collections();
-    const collectionNames = collections.map(c => c.collectionName);
+    let nfts = [];
+
+    if (event.httpMethod === 'POST') {
+      const { address } = JSON.parse(event.body || '{}');
+      if (address) {
+        nfts = await db.collection('nfts').find({ owner: address }).toArray();
+      }
+    } else {
+      nfts = await db.collection('nfts').find().limit(10).toArray();
+    }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ collections: collectionNames })
+      body: JSON.stringify({ nfts })
     };
   } catch (error) {
     console.error('Error:', error);
