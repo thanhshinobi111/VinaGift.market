@@ -1,7 +1,7 @@
 [build]
-  publish = "VinaGift"
+  publish = "VinaGift" # Phục vụ file tĩnh từ VinaGift
   functions = "functions"
-  command = "npm install && npm run build"
+  command = "echo 'No build required'" # Bỏ npm install && npm run build
 
 [[headers]]
   for = "/tonconnect-manifest.json"
@@ -12,7 +12,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagift.netlify.app https://*.mytonwallet.org https://tonhub.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagift.netlify.app https://*.mytonwallet.org https://tonhub.com;"
 
 [[redirects]]
   from = "/tonconnect-manifest.json"
