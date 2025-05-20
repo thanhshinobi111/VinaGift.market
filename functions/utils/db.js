@@ -1,16 +1,26 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient } = require("mongodb");
 
-const uri = 'mongodb+srv://<bobwsvn>:<HdcFJCtND68G0K1f>@cluster0.mongodb.net/vinagiftmarket?retryWrites=true&w=majority'; // Thay bằng connection string thực
-let client;
-let db;
+const uri = "mongodb+srv://bobwsvn:<db_password>@cluster0.7vquwap.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-const getDb = async () => {
-  if (db) return db;
+const client = new MongoClient(uri);
 
-  client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-  await client.connect();
-  db = client.db('vinagiftmarket');
-  return db;
+async function connectDB() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB Atlas");
+    return client.db("vinagift"); // trả về instance database để dùng tiếp
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    throw error;
+  }
+}
+
+async function closeDB() {
+  await client.close();
+  console.log("MongoDB connection closed");
+}
+
+module.exports = {
+  connectDB,
+  closeDB,
 };
-
-module.exports = { getDb };
