@@ -5,6 +5,7 @@
   "author": "shinobi",
   "license": "ISC",
   "dependencies": {
-    "mongodb": "^6.0.0"
+    "mongodb": "^6.0.0",
+    "@ton/ton": "^13.0.0"
   }
 }
