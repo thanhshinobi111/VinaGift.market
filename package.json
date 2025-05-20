@@ -4,7 +4,8 @@
   "description": "Vina Gift Marketplace project with TON SDK",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "vite build"
   },
   "author": "shinobi",
   "license": "ISC",
@@ -13,5 +14,8 @@
     "@tonconnect/ui": "^2.0.0",
     "@ton/ton": "^13.0.0",
     "mongodb": "^6.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }
