@@ -1,3 +1,8 @@
 [build]
   functions = "functions"
   publish = "VinaGift"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com;"
