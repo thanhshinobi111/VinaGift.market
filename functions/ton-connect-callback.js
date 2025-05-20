@@ -1,55 +1,65 @@
-// functions/ton-connect-callback.js
-
-const { TonConnectServer } = require('@tonconnect/server');
+const { TonConnect } = require('@tonconnect/sdk');
 
 exports.handler = async (event) => {
   try {
-    console.log("Received event:", JSON.stringify(event, null, 2));
-    if (event.httpMethod === "GET") {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: "Use POST with address and proof in body." })
-      };
-    }
+    console.log('Received event:', JSON.stringify(event, null, 2));
 
-    if (event.httpMethod !== "POST") {
+    // Kiểm tra phương thức GET (TON Connect sử dụng GET với query tc)
+    if (event.httpMethod !== 'GET') {
       return {
         statusCode: 405,
-        body: JSON.stringify({ error: "Method not allowed. Use POST." })
+        body: JSON.stringify({ error: 'Method not allowed. Use GET with tc query parameter.' })
       };
     }
 
-    let body;
+    const query = event.queryStringParameters || {};
+
+    // Kiểm tra query parameter tc
+    if (!query.tc) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Missing TonConnect callback data (tc)' })
+      };
+    }
+
+    // Giải mã dữ liệu tc
+    let connectData;
     try {
-      body = JSON.parse(event.body);
+      connectData = JSON.parse(decodeURIComponent(query.tc));
     } catch (parseError) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Invalid JSON in request body" })
+        body: JSON.stringify({ error: 'Invalid tc data format', details: parseError.message })
       };
     }
 
-    const { address, proof } = body;
-    if (!address || !proof) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Missing address or proof" })
-      };
-    }
-
-    const tonConnect = new TonConnectServer({
+    // Khởi tạo TonConnect
+    const tonConnect = new TonConnect({
       manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json'
     });
 
-    const isValid = await tonConnect.verifyProof(proof);
-    if (!isValid) {
+    // Khôi phục kết nối ví
+    const walletInfo = await tonConnect.restoreConnection();
+    if (!walletInfo) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Invalid proof" })
+        body: JSON.stringify({ error: 'Failed to restore wallet connection' })
       };
     }
 
-    // ✅ Nếu muốn redirect về Telegram bot
+    // Xác minh tonProof nếu có
+    if (connectData.tonProof) {
+      const isValid = await tonConnect.verifyTonProof(connectData.tonProof);
+      if (!isValid) {
+        return {
+          statusCode: 403,
+          body: JSON.stringify({ error: 'Invalid TON proof' })
+        };
+      }
+    }
+
+    // Redirect về Telegram bot với địa chỉ ví
+    const address = walletInfo.account.address;
     return {
       statusCode: 302,
       headers: {
@@ -58,16 +68,11 @@ exports.handler = async (event) => {
       body: ''
     };
 
-    // Hoặc trả về thông tin để xử lý tiếp tại client
-    // return {
-    //   statusCode: 200,
-    //   body: JSON.stringify({ success: true, address })
-    // };
   } catch (error) {
-    console.error("Error in ton-connect-callback:", error);
+    console.error('Error in ton-connect-callback:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: 'Internal server error', details: error.message })
     };
   }
 };
