@@ -83,7 +83,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 wallet_address = context.user_data["wallet"]
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        "https://vinagiftmarket.netlify.app/.netlify/functions/list-nft",
+                        "https://vinagift.netlify.app/.netlify/functions/list-nft",
                         json={
                             "wallet_address": wallet_address,
                             "nft_address": selected_nft["address"],
@@ -133,7 +133,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             wallet_address = context.user_data["wallet"]
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    "https://vinagiftmarket.netlify.app/.netlify/functions/get-balance",
+                    "https://vinagift.netlify.app/.netlify/functions/get-balance",
                     json={"address": wallet_address}
                 ) as response:
                     balance_data = await response.json()
@@ -141,7 +141,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    "https://vinagiftmarket.netlify.app/.netlify/functions/get-nfts",
+                    "https://vinagift.netlify.app/.netlify/functions/get-nfts",
                     json={"address": wallet_address}
                 ) as response:
                     nft_data = await response.json()
@@ -168,7 +168,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Vui lòng kết nối ví TON của bạn:",
                 reply_markup={
                     "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
                     ]]
                 }
             )
@@ -178,7 +178,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Vui lòng kết nối ví TON trước!",
                 reply_markup={
                     "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
                     ]]
                 }
             )
@@ -186,7 +186,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallet_address = context.user_data["wallet"]
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://vinagiftmarket.netlify.app/.netlify/functions/get-nfts-for-sale",
+                "https://vinagift.netlify.app/.netlify/functions/get-nfts-for-sale",
                 json={"seller_address": wallet_address}
             ) as response:
                 data = await response.json()
@@ -212,7 +212,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Vui lòng kết nối ví TON trước!",
                 reply_markup={
                     "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
                     ]]
                 }
             )
@@ -221,7 +221,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallet_address = context.user_data["wallet"]
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://vinagiftmarket.netlify.app/.netlify/functions/get-user-nfts",
+                "https://vinagift.netlify.app/.netlify/functions/get-user-nfts",
                 json={"user_id": user_id, "wallet_address": wallet_address}
             ) as response:
                 data = await response.json()
