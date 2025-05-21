@@ -1,6 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import aiohttp
+import json
 
 # Tạo menu chính
 main_menu = ReplyKeyboardMarkup(
@@ -12,23 +13,30 @@ main_menu = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# Domain của Netlify (thay đổi nếu cần)
-NETLIFY_DOMAIN = "https://vinagift.netlify.app"  # Thay bằng domain thực tế nếu khác
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Xử lý kết nối ví từ callback của TON Connect
-    if context.args and context.args[0].startswith("connected_"):
-        wallet_address = context.args[0].replace("connected_", "")
-        context.user_data["wallet"] = wallet_address
-        await update.message.reply_text(
-            f"Đã kết nối ví TON: {wallet_address}",
-            reply_markup=main_menu
-        )
+    await update.message.reply_text(
+        "Xin chào! Đây là ViNaGift Market! Mời bạn chọn một tính năng:",
+        reply_markup=main_menu
+    )
+
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.web_app_data:
+        try:
+            data = json.loads(update.message.web_app_data.data)
+            wallet_address = data.get("address")
+            user_id = data.get("user_id")
+            if data.get("type") == "wallet_address" and wallet_address:
+                context.user_data["wallet"] = wallet_address  # Lưu địa chỉ ví vào user_data
+                await update.message.reply_text(
+                    f"Đã kết nối ví TON: {wallet_address}",
+                    reply_markup=main_menu
+                )
+            else:
+                await update.message.reply_text("Dữ liệu không hợp lệ.", reply_markup=main_menu)
+        except json.JSONDecodeError:
+            await update.message.reply_text("Lỗi: Dữ liệu không đúng định dạng JSON.", reply_markup=main_menu)
     else:
-        await update.message.reply_text(
-            "Xin chào! Đây là ViNaGift Market! Mời bạn chọn một tính năng:",
-            reply_markup=main_menu
-        )
+        await update.message.reply_text("Không nhận được dữ liệu từ WebApp.", reply_markup=main_menu)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
@@ -75,7 +83,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 wallet_address = context.user_data["wallet"]
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        f"{NETLIFY_DOMAIN}/.netlify/functions/list-nft",
+                        "https://vinagiftmarket.netlify.app/.netlify/functions/list-nft",
                         json={
                             "wallet_address": wallet_address,
                             "nft_address": selected_nft["address"],
@@ -85,12 +93,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             "price": price
                         }
                     ) as response:
-                        if response.status != 200:
-                            await update.message.reply_text(
-                                f"Lỗi khi đăng bán NFT: {response.status} - {await response.text()}",
-                                reply_markup=main_menu
-                            )
-                            return
                         data = await response.json()
                         if "message" in data:
                             await update.message.reply_text(
@@ -98,17 +100,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 reply_markup=main_menu
                             )
                         else:
-                            await update.message.reply_text(
-                                f"Có lỗi xảy ra: {data.get('error', 'Không xác định')}",
-                                reply_markup=main_menu
-                            )
+                            await update.message.reply_text("Có lỗi xảy ra. Vui lòng thử lại!", reply_markup=main_menu)
                 context.user_data["state"] = None
                 context.user_data.pop("selected_nft", None)
                 context.user_data.pop("nfts_in_wallet", None)
             except ValueError:
                 await update.message.reply_text("Vui lòng nhập giá hợp lệ (ví dụ: 5.0) hoặc 'hủy' để thoát!", reply_markup=main_menu)
-            except Exception as e:
-                await update.message.reply_text(f"Lỗi không xác định: {str(e)}", reply_markup=main_menu)
             return
         elif context.user_data["state"] == "viewing_nfts_for_sale":
             user_input = user_text.lower()
@@ -134,128 +131,113 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_text == "Ví của bạn 📥":
         if "wallet" in context.user_data:
             wallet_address = context.user_data["wallet"]
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        f"{NETLIFY_DOMAIN}/.netlify/functions/get-balance",
-                        json={"address": wallet_address}
-                    ) as response:
-                        if response.status != 200:
-                            await update.message.reply_text(
-                                f"Lỗi khi lấy số dư: {response.status} - {await response.text()}",
-                                reply_markup=main_menu
-                            )
-                            return
-                        balance_data = await response.json()
-                        balance = balance_data.get("balance", "N/A")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://vinagiftmarket.netlify.app/.netlify/functions/get-balance",
+                    json={"address": wallet_address}
+                ) as response:
+                    balance_data = await response.json()
+                    balance = balance_data.get("balance", "N/A")
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        f"{NETLIFY_DOMAIN}/.netlify/functions/get-nfts",
-                        json={"address": wallet_address}
-                    ) as response:
-                        if response.status != 200:
-                            await update.message.reply_text(
-                                f"Lỗi khi lấy NFT: {response.status} - {await response.text()}",
-                                reply_markup=main_menu
-                            )
-                            return
-                        nft_data = await response.json()
-                        nfts = nft_data.get("nfts", [])
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://vinagiftmarket.netlify.app/.netlify/functions/get-nfts",
+                    json={"address": wallet_address}
+                ) as response:
+                    nft_data = await response.json()
+                    nfts = nft_data.get("nfts", [])
 
-                message = f"Ví của bạn: {wallet_address}\nSố dư TON: {balance} TON\n\nNFT trong ví của bạn:\n"
-                if nfts:
-                    for idx, nft in enumerate(nfts):
-                        message += f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})\n"
-                        if nft.get('animation_url'):
-                            await update.message.reply_animation(
-                                animation=nft['animation_url'],
-                                caption=f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})"
-                            )
-                    context.user_data["nfts_in_wallet"] = nfts
-                    context.user_data["state"] = "selecting_nft_to_list"
-                    message += "\nNhập số thứ tự NFT để đăng bán hoặc 'hủy' để thoát:"
-                else:
-                    message += "Bạn chưa sở hữu NFT nào."
-                await update.message.reply_text(message, reply_markup=main_menu)
-            except Exception as e:
-                await update.message.reply_text(f"Lỗi khi xử lý ví: {str(e)}", reply_markup=main_menu)
+            message = f"Ví của bạn: {wallet_address}\nSố dư TON: {balance} TON\n\nNFT trong ví của bạn:\n"
+            if nfts:
+                for idx, nft in enumerate(nfts):
+                    message += f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})\n"
+                    if nft['animation_url']:
+                        await update.message.reply_animation(
+                            animation=nft['animation_url'],
+                            caption=f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})"
+                        )
+                context.user_data["nfts_in_wallet"] = nfts
+                context.user_data["state"] = "selecting_nft_to_list"
+                message += "\nNhập số thứ tự NFT để đăng bán hoặc 'hủy' để thoát:"
+            else:
+                message += "Bạn chưa sở hữu NFT nào."
+            await update.message.reply_text(message, reply_markup=main_menu)
         else:
-            connect_link = f"https://app.tonkeeper.com/ton-connect?v=2&manifestUrl={NETLIFY_DOMAIN}/tonconnect-manifest.json&returnUrl={NETLIFY_DOMAIN}/.netlify/functions/ton-connect-callback"
+            # Hiển thị nút inline để mở WebApp kết nối ví
             await update.message.reply_text(
-                f"Vui lòng kết nối ví TON của bạn:\n{connect_link}",
-                reply_markup=main_menu
+                "Vui lòng kết nối ví TON của bạn:",
+                reply_markup={
+                    "inline_keyboard": [[
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                    ]]
+                }
             )
     elif user_text == "Các NFT đang được bán 📦":
         if "wallet" not in context.user_data:
-            await update.message.reply_text("Vui lòng kết nối ví TON trước!", reply_markup=main_menu)
+            await update.message.reply_text(
+                "Vui lòng kết nối ví TON trước!",
+                reply_markup={
+                    "inline_keyboard": [[
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                    ]]
+                }
+            )
             return
         wallet_address = context.user_data["wallet"]
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{NETLIFY_DOMAIN}/.netlify/functions/get-nfts-for-sale",
-                    json={"seller_address": wallet_address}
-                ) as response:
-                    if response.status != 200:
-                        await update.message.reply_text(
-                            f"Lỗi khi lấy NFT đang bán: {response.status} - {await response.text()}",
-                            reply_markup=main_menu
-                        )
-                        return
-                    data = await response.json()
-                    nfts = data.get("nfts", [])
-            if nfts:
-                message = "NFT bạn đang bán:\n"
-                for idx, nft in enumerate(nfts):
-                    message += f"{idx + 1}. {nft['name']}: {nft['price']} TON\n"
-                    if nft.get('animation_url'):
-                        await update.message.reply_animation(
-                            animation=nft['animation_url'],
-                            caption=f"{idx + 1}. {nft['name']}: {nft['price']} TON"
-                        )
-                context.user_data["nfts_for_sale"] = nfts
-                context.user_data["state"] = "viewing_nfts_for_sale"
-                message += "\nNhập số thứ tự NFT để xem chi tiết hoặc 'hủy' để thoát:"
-            else:
-                message = "Bạn chưa có NFT nào đang bán."
-            await update.message.reply_text(message, reply_markup=main_menu)
-        except Exception as e:
-            await update.message.reply_text(f"Lỗi khi lấy NFT đang bán: {str(e)}", reply_markup=main_menu)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://vinagiftmarket.netlify.app/.netlify/functions/get-nfts-for-sale",
+                json={"seller_address": wallet_address}
+            ) as response:
+                data = await response.json()
+                nfts = data.get("nfts", [])
+        if nfts:
+            message = "NFT bạn đang bán:\n"
+            for idx, nft in enumerate(nfts):
+                message += f"{idx + 1}. {nft['name']}: {nft['price']} TON\n"
+                if nft['animation_url']:
+                    await update.message.reply_animation(
+                        animation=nft['animation_url'],
+                        caption=f"{idx + 1}. {nft['name']}: {nft['price']} TON"
+                    )
+            context.user_data["nfts_for_sale"] = nfts
+            context.user_data["state"] = "viewing_nfts_for_sale"
+            message += "\nNhập số thứ tự NFT để xem chi tiết hoặc 'hủy' để thoát:"
+        else:
+            message = "Bạn chưa có NFT nào đang bán."
+        await update.message.reply_text(message, reply_markup=main_menu)
     elif user_text == "Profile của bạn 👤":
         if "wallet" not in context.user_data:
-            await update.message.reply_text("Vui lòng kết nối ví TON trước!", reply_markup=main_menu)
+            await update.message.reply_text(
+                "Vui lòng kết nối ví TON trước!",
+                reply_markup={
+                    "inline_keyboard": [[
+                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagiftmarket.netlify.app"}}
+                    ]]
+                }
+            )
             return
         user_id = str(update.effective_user.id)
         wallet_address = context.user_data["wallet"]
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{NETLIFY_DOMAIN}/.netlify/functions/get-user-nfts",
-                    json={"user_id": user_id, "wallet_address": wallet_address}
-                ) as response:
-                    if response.status != 200:
-                        await update.message.reply_text(
-                            f"Lỗi khi lấy NFT trong profile: {response.status} - {await response.text()}",
-                            reply_markup=main_menu
-                        )
-                        return
-                    data = await response.json()
-                    nfts = data.get("nfts", [])
-            if nfts:
-                message = "NFT trong profile của bạn:\n"
-                for idx, nft in enumerate(nfts):
-                    message += f"{idx + 1}. {nft['name']}\n"
-                    if nft.get('animation_url'):
-                        await update.message.reply_animation(
-                            animation=nft['animation_url'],
-                            caption=f"{idx + 1}. {nft['name']}"
-                        )
-            else:
-                message = "Bạn chưa có NFT nào trong profile."
-            await update.message.reply_text(message, reply_markup=main_menu)
-        except Exception as e:
-            await update.message.reply_text(f"Lỗi khi lấy profile: {str(e)}", reply_markup=main_menu)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://vinagiftmarket.netlify.app/.netlify/functions/get-user-nfts",
+                json={"user_id": user_id, "wallet_address": wallet_address}
+            ) as response:
+                data = await response.json()
+                nfts = data.get("nfts", [])
+        if nfts:
+            message = "NFT trong profile của bạn:\n"
+            for idx, nft in enumerate(nfts):
+                message += f"{idx + 1}. {nft['name']}\n"
+                if nft['animation_url']:
+                    await update.message.reply_animation(
+                        animation=nft['animation_url'],
+                        caption=f"{idx + 1}. {nft['name']}"
+                    )
+        else:
+            message = "Bạn chưa có NFT nào trong profile."
+        await update.message.reply_text(message, reply_markup=main_menu)
     elif user_text == "Cài đặt ⚙️":
         await update.message.reply_text("Đây là phần cài đặt (chưa triển khai).", reply_markup=main_menu)
     else:
@@ -265,8 +247,8 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token("7596478230:AAGfbq2dSS_N4rGWfyJ8cYjEfFkEIgzfs4Y").build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Bot đang chạy...")
-    import asyncio
-    asyncio.run(app.run_polling())
+    app.run_polling()
