@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Kết nối ví TON - VinaGift</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Thêm viewport để tối ưu trên di động -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -11,12 +12,23 @@
       background: #f0f0f0;
       padding: 20px;
       text-align: center;
+      margin: 0; /* Xóa margin mặc định */
     }
     #connect-button {
       margin: 20px auto;
     }
     #wallet-info {
       margin-top: 20px;
+      font-weight: bold;
+      word-break: break-all; /* Đảm bảo địa chỉ ví không tràn */
+    }
+    #marketplace-link {
+      display: none;
+      margin-top: 20px;
+    }
+    #marketplace-link a {
+      color: #007bff;
+      text-decoration: none;
       font-weight: bold;
     }
   </style>
@@ -25,13 +37,21 @@
   <h1>🔗 Kết nối ví TON</h1>
   <div id="connect-button"></div>
   <p id="wallet-info"></p>
+  <div id="marketplace-link">
+    <a href="https://vinagiftmarket.netlify.app/marketplace">Truy cập Marketplace</a>
+  </div>
 
   <script>
     const telegramWebApp = window.Telegram?.WebApp;
     let walletAddress = "";
 
+    // Khởi tạo Telegram WebApp nếu có
+    if (telegramWebApp) {
+      telegramWebApp.ready();
+    }
+
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
+      manifestUrl: 'https://vinagiftmarket.netlify.app/tonconnect-manifest.json', // Thống nhất URL
       buttonRootId: 'connect-button'
     });
 
@@ -40,14 +60,34 @@
         walletAddress = walletInfo.account.address;
         document.getElementById('wallet-info').innerText = '✅ Đã kết nối ví: ' + walletAddress;
 
-        // Nếu chạy trong Telegram WebApp, redirect về bot với start parameter
+        // Kiểm tra môi trường (Telegram WebApp hay trình duyệt)
         if (telegramWebApp && telegramWebApp.initDataUnsafe && telegramWebApp.initDataUnsafe.user) {
-          const botUsername = "@VinaGift_bot"; // ⚠️ Thay bằng username thật của bot bạn
-          const redirectUrl = `https://t.me/${botUsername}?start=connected_${walletAddress}`;
-          window.location.href = redirectUrl;
+          // Chạy trong Telegram WebApp: Gửi dữ liệu về bot
+          try {
+            const userId = telegramWebApp.initDataUnsafe.user.id;
+            telegramWebApp.sendData(
+              JSON.stringify({
+                type: "wallet_address",
+                address: walletAddress,
+                user_id: userId
+              })
+            );
+            telegramWebApp.close(); // Đóng WebApp
+          } catch (error) {
+            console.error("Lỗi khi gửi dữ liệu về bot:", error);
+            document.getElementById('wallet-info').innerText = '❌ Lỗi khi gửi địa chỉ ví!';
+          }
+        } else {
+          // Chạy ngoài Telegram (trình duyệt): Hiển thị link đến marketplace
+          document.getElementById('wallet-info').innerText = '✅ Đã kết nối ví: ' + walletAddress + '\nBạn có thể truy cập Marketplace.';
+          document.getElementById('marketplace-link').style.display = 'block';
+
+          // Lưu địa chỉ ví vào localStorage để sử dụng trong marketplace
+          localStorage.setItem('connectedWalletAddress', walletAddress);
         }
       } else {
         document.getElementById('wallet-info').innerText = '';
+        document.getElementById('marketplace-link').style.display = 'none';
       }
     });
   </script>
