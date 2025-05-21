@@ -5,27 +5,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vina Gift Marketplace</title>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 50px;
       background: #f3f3f3;
-      -webkit-text-size-adjust: 100%;
-      -moz-text-size-adjust: none;
-      text-size-adjust: 100%;
     }
     h1 { color: #333; }
-    button {
-      background-color: #04aaff;
-      color: white;
-      padding: 15px 25px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+    #connect-button {
+      display: inline-block;
+      margin: 20px;
     }
-    button:hover { background-color: #028dd3; }
     #wallet-info {
       margin-top: 20px;
       font-weight: bold;
@@ -35,8 +27,23 @@
 </head>
 <body>
   <h1>Welcome to Vina Gift Marketplace</h1>
-  <button id="connect-wallet-btn">Kết nối ví TON</button>
+  <div id="connect-button"></div>
   <div id="wallet-info"></div>
-  <script src="./script.js"></script>
+
+  <script>
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: 'https://vinagift.netlify.app/tonconnect-manifest.json',
+      buttonRootId: 'connect-button'
+    });
+
+    tonConnectUI.onStatusChange((walletInfo) => {
+      if (walletInfo && walletInfo.account) {
+        document.getElementById('wallet-info').innerText =
+          'Đã kết nối ví: ' + walletInfo.account.address;
+      } else {
+        document.getElementById('wallet-info').innerText = '';
+      }
+    });
+  </script>
 </body>
 </html>
