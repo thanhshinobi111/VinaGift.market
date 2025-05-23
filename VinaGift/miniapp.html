@@ -9,7 +9,6 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       padding: 20px;
       background: #f3f3f3;
       margin: 0;
@@ -20,6 +19,8 @@
     h1 {
       color: #333;
       font-size: 24px;
+      text-align: center;
+      margin-bottom: 20px;
     }
     button {
       background-color: #04aaff;
@@ -29,25 +30,75 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      margin: 10px 0;
+      margin: 10px 5px;
+      transition: background-color 0.2s;
     }
     button:hover {
       background-color: #028dd3;
     }
-    #wallet-info,
-    #nft-list,
-    #nfts-for-sale {
-      margin-top: 20px;
+    #wallet-info, #balance-info {
+      margin: 15px 0;
       font-weight: bold;
       color: #555;
-      text-align: left;
+      text-align: center;
+    }
+    #nft-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
     }
     .nft-item {
-      margin: 10px 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+    }
+    .nft-item:hover {
+      transform: translateY(-2px);
     }
     .nft-item img {
-      max-width: 100px;
-      border-radius: 8px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .nft-item p {
+      margin: 5px 0;
+      color: #555;
+      font-size: 14px;
+    }
+    .nft-item button {
+      padding: 8px 16px;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .sell-btn {
+      background-color: #ff4444;
+    }
+    .sell-btn:hover {
+      background-color: #cc0000;
+    }
+    .details-btn {
+      background-color: #007bff;
+    }
+    .details-btn:hover {
+      background-color: #0056b3;
+    }
+    @media (max-width: 600px) {
+      #nft-list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+      h1 {
+        font-size: 20px;
+      }
+      button {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
     }
   </style>
 </head>
@@ -56,8 +107,8 @@
   <button id="connect-wallet-btn">Kết nối ví TON</button>
   <button id="disconnect-wallet-btn" style="display: none;">Ngắt kết nối ví</button>
   <div id="wallet-info">Disconnected</div>
-  <div id="nft-list">No NFTs loaded</div>
-  <div id="nfts-for-sale">No NFTs for sale</div>
+  <div id="balance-info"></div>
+  <div id="nft-list"></div>
 
   <script>
     const tonConnectUI = new TONConnectUI({
@@ -65,9 +116,25 @@
       buttonRootId: 'connect-wallet-btn'
     });
 
+    async function displayBalance(walletAddress) {
+      try {
+        const response = await fetch('/api/get-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: walletAddress })
+        });
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const data = await response.json();
+        document.getElementById('balance-info').innerText = `Balance: ${data.balance} TON`;
+      } catch (error) {
+        console.error('Error fetching balance:', error);
+        document.getElementById('balance-info').innerText = `Error loading balance: ${error.message}`;
+      }
+    }
+
     async function displayNFTs(walletAddress) {
       try {
-        const response = await fetch('/api/db-connect', {
+        const response = await fetch('/api/get-nfts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address: walletAddress })
@@ -76,29 +143,29 @@
         const data = await response.json();
         const nfts = data.nfts || [];
         const nftList = document.getElementById('nft-list');
-        const nftsForSale = document.getElementById('nfts-for-sale');
-        nftList.innerHTML = '';
-        nftsForSale.innerHTML = '';
-        if (nfts.length === 0) {
-          nftList.innerText = 'No NFTs found';
-          nftsForSale.innerText = 'No NFTs for sale';
-          return;
-        }
-        nfts.forEach(nft => {
-          const nftItem = document.createElement('div');
-          nftItem.className = 'nft-item';
-          nftItem.innerHTML = `
+        nftList.innerHTML = nfts.length === 0 ? 'No NFTs found' : nfts.map(nft => `
+          <div class="nft-item">
             <img src="${nft.image || 'https://via.placeholder.com/100'}" alt="${nft.name || 'NFT'}">
-            <p>Name: ${nft.name || 'Unknown'}</p>
-            <p>Price: ${nft.price ? `${nft.price} TON` : 'Not for sale'}</p>
-          `;
-          if (nft.forSale) nftsForSale.appendChild(nftItem.cloneNode(true));
-          else nftList.appendChild(nftItem);
-        });
+            <p><strong>${nft.name || 'Unknown'}</strong></p>
+            <p>${nft.description || 'No description'}</p>
+            <button class="sell-btn" onclick="sellNFT('${nft.index}')">Sell</button>
+            <button class="details-btn" onclick="viewDetails('${nft.index}')">Details</button>
+          </div>
+        `).join('');
       } catch (error) {
         console.error('Error fetching NFTs:', error);
         document.getElementById('nft-list').innerText = `Error loading NFTs: ${error.message}`;
       }
+    }
+
+    async function sellNFT(index) {
+      // TODO: Gọi API Getgems hoặc smart contract để liệt kê NFT
+      alert(`Sell NFT with index: ${index}`);
+    }
+
+    async function viewDetails(index) {
+      // TODO: Hiển thị modal với metadata
+      alert(`View details for NFT with index: ${index}`);
     }
 
     async function connectWallet() {
@@ -107,6 +174,7 @@
         console.log('Connected wallet:', wallet);
         const address = wallet.account.address;
         document.getElementById('wallet-info').innerText = `Connected: ${address}`;
+        await displayBalance(address);
         await displayNFTs(address);
       } catch (error) {
         console.error('Connection error:', error);
@@ -118,8 +186,8 @@
       try {
         await tonConnectUI.disconnect();
         document.getElementById('wallet-info').innerText = 'Disconnected';
+        document.getElementById('balance-info').innerText = '';
         document.getElementById('nft-list').innerText = 'No NFTs loaded';
-        document.getElementById('nfts-for-sale').innerText = 'No NFTs for sale';
       } catch (error) {
         console.error('Disconnect error:', error);
         document.getElementById('wallet-info').innerText = `Disconnect failed: ${error.message}`;
@@ -142,6 +210,7 @@
         const wallet = tonConnectUI.wallet;
         if (wallet) {
           document.getElementById('wallet-info').innerText = `Connected: ${wallet.account.address}`;
+          await displayBalance(wallet.account.address);
           await displayNFTs(wallet.account.address);
         }
         tonConnectUI.onStatusChange(wallet => {
@@ -152,13 +221,14 @@
             document.getElementById('wallet-info').innerText = `Connected: ${wallet.account.address}`;
             disconnectBtn.style.display = 'block';
             connectBtn.style.display = 'none';
+            displayBalance(wallet.account.address);
             displayNFTs(wallet.account.address);
           } else {
             document.getElementById('wallet-info').innerText = 'Disconnected';
             disconnectBtn.style.display = 'none';
             connectBtn.style.display = 'block';
+            document.getElementById('balance-info').innerText = '';
             document.getElementById('nft-list').innerText = 'No NFTs loaded';
-            document.getElementById('nfts-for-sale').innerText = 'No NFTs for sale';
           }
         });
         const walletsList = await tonConnectUI.getWallets();
