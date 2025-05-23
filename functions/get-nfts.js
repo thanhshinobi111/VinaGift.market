@@ -1,31 +1,36 @@
-const fetch = require('node-fetch');
+// functions/get-nfts.js
+const { getNFTsByOwner } = require('../utils/db');
+require('dotenv').config();
 
 exports.handler = async (event) => {
-  const { address } = JSON.parse(event.body);
-
   try {
-    const response = await fetch(
-      `https://toncenter.com/api/v2/getItems?owner=${address}`,
-      {
-        headers: {
-          'X-API-Key': '7fbde468e0056d1a6f04aa78032f237890923efd62bff334b142f6381d1405ee' // Thay bằng API key thực
-        }
-      }
-    );
-    const data = await response.json();
+    if (event.httpMethod !== 'POST') {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Only POST method supported' }) };
+    }
 
-    const nfts = data.nft_items.map(nft => ({
-      address: nft.address,
-      name: nft.metadata?.name || 'Unknown NFT',
-      animation_url: nft.metadata?.image || '',
-      collection_name: nft.collection?.name || 'Unknown Collection'
+    const { address } = JSON.parse(event.body || '{}');
+    if (!address) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Missing address parameter' }) };
+    }
+
+    const nfts = await getNFTsByOwner(address);
+
+    const formattedNFTs = nfts.map(nft => ({
+      name: nft.name || 'Unknown',
+      description: nft.description || 'No description',
+      image: nft.image || 'https://via.placeholder.com/100',
+      content_url: nft.content_url,
+      attributes: nft.attributes || [],
+      collection: nft.collection,
+      index: nft.index
     }));
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ nfts })
+      body: JSON.stringify({ nfts: formattedNFTs })
     };
   } catch (error) {
+    console.error('Error:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message })
