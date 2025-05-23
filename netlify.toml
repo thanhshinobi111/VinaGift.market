@@ -1,42 +1,24 @@
 [build]
   publish = "VinaGift" # Phục vụ file tĩnh từ VinaGift
   functions = "functions"
-  command = "echo 'No build required'" # Bỏ npm install && npm run build
+  command = "echo 'No build required'" # Không cần build
 
 [[headers]]
   for = "/tonconnect-manifest.json"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Content-Type = "application/json"
+    Cache-Control = "public, max-age=604800" # Cache 7 ngày
+
+[[headers]]
+  for = "/icon.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800" # Cache 7 ngày
 
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://vinagift.netlify.app https://*.mytonwallet.org https://tonhub.com;"
-
-[[redirects]]
-  from = "/tonconnect-manifest.json"
-  to = "/tonconnect-manifest.json"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/icon.png"
-  to = "/icon.png"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/terms.html"
-  to = "/terms.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/privacy.html"
-  to = "/privacy.html"
-  status = 200
-  force = true
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://s.getgems.io https://via.placeholder.com; connect-src 'self' https://app.tonkeeper.com https://bridge.tonapi.io https://toncenter.com https://vinagift.netlify.app https://*.mytonwallet.org https://tonhub.com;"
 
 [[redirects]]
   from = "/api/*"
