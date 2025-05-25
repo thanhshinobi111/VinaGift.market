@@ -1,67 +1,50 @@
-// functions/ton-connect-callback.js
-
-const { saveNFTMetadata, saveUserMapping } = require("../utils/db");
-const { TonClient } = require('@ton/ton');
-const TelegramBot = require('node-telegram-bot-api');
+const crypto = require('crypto');
 require('dotenv').config();
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
-
 exports.handler = async (event) => {
-  try {
-    const { tc } = event.queryStringParameters || {};
-    if (!tc) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing tc parameter" }) };
-    }
-
-    const decodedTc = decodeURIComponent(tc);
-    const parsedTc = JSON.parse(decodedTc);
-
-    const address = parsedTc?.client_id?.split('_')?.[1];
-    const telegramId = parsedTc?.telegram_id;
-
-    if (!address || !telegramId) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Invalid tc format or missing data" }) };
-    }
-
-    // Save mapping
-    await saveUserMapping(telegramId, address);
-
-    // Fake NFT metadata
-    const nftMetadata = {
-      name: "Telegram Gift NFT",
-      description: "Gift converted to NFT on TON blockchain",
-      image: "https://s.getgems.io/nft/gift.png",
-      attributes: [{ trait_type: "Type", value: "Gift" }],
-      collectionAddress: "EQD7Qtnas8qpMvT7-Z634_6G60DGp02owte5NnEjaWq6hb7v",
-      index: Date.now(),
-      content_url: `https://vinagift.netlify.app/nft/${address}.json`
-    };
-
-    // Save NFT metadata to DB (no real minting)
-    await saveNFTMetadata(address, nftMetadata);
-
-    // Notify user
-    await bot.sendMessage(telegramId, `🎉 NFT Gift minted successfully!\nName: ${nftMetadata.name}\nView at: https://vinagift.netlify.app`, {
-      reply_markup: {
-        inline_keyboard: [[{ text: "🛍 Open Mini App", url: "https://vinagift.netlify.app" }]]
-      }
-    });
-
-    // Redirect to bot with start param
+  if (event.httpMethod !== 'POST') {
     return {
-      statusCode: 302,
-      headers: {
-        Location: `https://t.me/VinaGiftBot?start=connected_${address}`
-      },
-      body: ''
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Only POST method is allowed' }),
     };
+  }
 
+  try {
+    const body = JSON.parse(event.body || '{}');
+
+    const { account, clientSessionId } = body;
+
+    if (!account || !clientSessionId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Missing account or clientSessionId' }),
+      };
+    }
+
+    // 👉 Lấy địa chỉ ví từ dữ liệu TonConnect
+    const walletAddress = account.address;
+
+    // 👉 Mã hóa base64 để gửi qua Telegram start param
+    const startParam = Buffer.from(walletAddress).toString('base64');
+
+    // 👉 Tên bot Telegram (lấy từ biến môi trường hoặc mặc định)
+    const telegramBotUsername = process.env.TELEGRAM_BOT_USERNAME || 'VinaGift_bot';
+
+    const redirectUrl = `https://t.me/${telegramBotUsername}?start=${startParam}`;
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: 'Wallet connected successfully',
+        redirectUrl,
+        walletAddress,
+      }),
+    };
   } catch (error) {
-    console.error("Error in ton-connect-callback:", error);
+    console.error('TonConnect callback error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Internal server error" })
+      body: JSON.stringify({ error: 'Internal server error' }),
     };
   }
 };
