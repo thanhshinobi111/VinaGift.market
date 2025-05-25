@@ -1,254 +1,105 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-import aiohttp
-import json
+# bot.py
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes
+import requests
+from dotenv import load_dotenv
 
-# Tạo menu chính
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton("Ví của bạn 📥")],
-        [KeyboardButton("Các NFT đang được bán 📦"), KeyboardButton("Profile của bạn 👤")],
-        [KeyboardButton("Cài đặt ⚙️")]
-    ],
-    resize_keyboard=True
-)
+# Tải biến môi trường từ .env
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+NETLIFY_API_URL = os.getenv('NETLIFY_API_URL', 'https://vinagift.netlify.app')
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Khởi tạo bot
+application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Xử lý lệnh /start"""
+    user = update.effective_user
+    keyboard = [
+        [InlineKeyboardButton("Ví của bạn", url=f"{NETLIFY_API_URL}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Xin chào! Đây là ViNaGift Market! Mời bạn chọn một tính năng:",
-        reply_markup=main_menu
+        f"Chào {user.first_name}! Chào mừng bạn đến với Vina Gift Marketplace.\n"
+        "Nhấn 'Ví của bạn' để xem số dư và NFT của bạn!",
+        reply_markup=reply_markup
     )
 
-async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.web_app_data:
-        try:
-            data = json.loads(update.message.web_app_data.data)
-            wallet_address = data.get("address")
-            user_id = data.get("user_id")
-            if data.get("type") == "wallet_address" and wallet_address:
-                context.user_data["wallet"] = wallet_address  # Lưu địa chỉ ví vào user_data
-                await update.message.reply_text(
-                    f"Đã kết nối ví TON: {wallet_address}",
-                    reply_markup=main_menu
-                )
-            else:
-                await update.message.reply_text("Dữ liệu không hợp lệ.", reply_markup=main_menu)
-        except json.JSONDecodeError:
-            await update.message.reply_text("Lỗi: Dữ liệu không đúng định dạng JSON.", reply_markup=main_menu)
-    else:
-        await update.message.reply_text("Không nhận được dữ liệu từ WebApp.", reply_markup=main_menu)
+async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Xử lý lệnh /wallet"""
+    keyboard = [
+        [InlineKeyboardButton("Mở ví", url=f"{NETLIFY_API_URL}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Nhấn nút dưới để mở ví và xem NFT của bạn!",
+        reply_markup=reply_markup
+    )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-
-    # Xử lý trạng thái (state)
-    if "state" in context.user_data:
-        if context.user_data["state"] == "selecting_nft_to_list":
-            user_input = user_text.lower()
-            if user_input == "hủy":
-                context.user_data["state"] = None
-                context.user_data.pop("nfts_in_wallet", None)
-                await update.message.reply_text("Đã thoát khỏi chế độ chọn NFT.", reply_markup=main_menu)
-                return
-            try:
-                choice = int(user_input) - 1
-                nfts = context.user_data["nfts_in_wallet"]
-                if 0 <= choice < len(nfts):
-                    selected_nft = nfts[choice]
-                    context.user_data["selected_nft"] = selected_nft
-                    context.user_data["state"] = "entering_nft_price"
-                    await update.message.reply_text(
-                        f"Bạn đã chọn NFT: {selected_nft['name']}.\nVui lòng nhập giá bán (TON), ví dụ: 5.0:",
-                        reply_markup=main_menu
-                    )
-                else:
-                    await update.message.reply_text("Số thứ tự không hợp lệ. Vui lòng thử lại!", reply_markup=main_menu)
-            except ValueError:
-                await update.message.reply_text("Vui lòng nhập số thứ tự hợp lệ hoặc 'hủy' để thoát!", reply_markup=main_menu)
+async def nfts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Xử lý lệnh /nfts: Lấy danh sách NFT từ API"""
+    telegram_id = str(update.effective_user.id)
+    
+    try:
+        # Lấy TON address từ telegramId (gọi API hoặc MongoDB trực tiếp)
+        response = requests.post(
+            f"{NETLIFY_API_URL}/api/get-user-address",
+            json={"telegramId": telegram_id},
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code != 200:
+            await update.message.reply_text("Không tìm thấy địa chỉ ví của bạn. Vui lòng kết nối ví trong Mini App!")
             return
-        elif context.user_data["state"] == "entering_nft_price":
-            user_input = user_text.lower()
-            if user_input == "hủy":
-                context.user_data["state"] = None
-                context.user_data.pop("selected_nft", None)
-                context.user_data.pop("nfts_in_wallet", None)
-                await update.message.reply_text("Đã thoát khỏi chế độ đăng bán NFT.", reply_markup=main_menu)
-                return
-            try:
-                price = float(user_input)
-                if price <= 0:
-                    await update.message.reply_text("Giá phải lớn hơn 0. Vui lòng nhập lại!", reply_markup=main_menu)
-                    return
-                selected_nft = context.user_data["selected_nft"]
-                wallet_address = context.user_data["wallet"]
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        "https://vinagift.netlify.app/.netlify/functions/list-nft",
-                        json={
-                            "wallet_address": wallet_address,
-                            "nft_address": selected_nft["address"],
-                            "name": selected_nft["name"],
-                            "description": selected_nft.get("description", ""),
-                            "animation_url": selected_nft["animation_url"],
-                            "price": price
-                        }
-                    ) as response:
-                        data = await response.json()
-                        if "message" in data:
-                            await update.message.reply_text(
-                                f"Đã đăng bán NFT thành công!\nNFT: {selected_nft['name']}\nGiá: {price} TON",
-                                reply_markup=main_menu
-                            )
-                        else:
-                            await update.message.reply_text("Có lỗi xảy ra. Vui lòng thử lại!", reply_markup=main_menu)
-                context.user_data["state"] = None
-                context.user_data.pop("selected_nft", None)
-                context.user_data.pop("nfts_in_wallet", None)
-            except ValueError:
-                await update.message.reply_text("Vui lòng nhập giá hợp lệ (ví dụ: 5.0) hoặc 'hủy' để thoát!", reply_markup=main_menu)
-            return
-        elif context.user_data["state"] == "viewing_nfts_for_sale":
-            user_input = user_text.lower()
-            if user_input == "hủy":
-                context.user_data["state"] = None
-                context.user_data.pop("nfts_for_sale", None)
-                await update.message.reply_text("Đã thoát khỏi danh sách NFT đang bán.", reply_markup=main_menu)
-                return
-            try:
-                choice = int(user_input) - 1
-                nfts = context.user_data["nfts_for_sale"]
-                if 0 <= choice < len(nfts):
-                    nft = nfts[choice]
-                    message = f"Chi tiết NFT:\nTên: {nft['name']}\nGiá: {nft['price']} TON\nNgười bán: {nft['seller_address']}"
-                    await update.message.reply_text(message, reply_markup=main_menu)
-                else:
-                    await update.message.reply_text("Số thứ tự không hợp lệ. Vui lòng thử lại!", reply_markup=main_menu)
-            except ValueError:
-                await update.message.reply_text("Vui lòng nhập số thứ tự hợp lệ hoặc 'hủy' để thoát!", reply_markup=main_menu)
+        
+        address_data = response.json()
+        ton_address = address_data.get("address")
+        if not ton_address:
+            await update.message.reply_text("Không tìm thấy địa chỉ ví của bạn. Vui lòng kết nối ví trong Mini App!")
             return
 
-    # Xử lý lựa chọn từ menu
-    if user_text == "Ví của bạn 📥":
-        if "wallet" in context.user_data:
-            wallet_address = context.user_data["wallet"]
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://vinagift.netlify.app/.netlify/functions/get-balance",
-                    json={"address": wallet_address}
-                ) as response:
-                    balance_data = await response.json()
-                    balance = balance_data.get("balance", "N/A")
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://vinagift.netlify.app/.netlify/functions/get-nfts",
-                    json={"address": wallet_address}
-                ) as response:
-                    nft_data = await response.json()
-                    nfts = nft_data.get("nfts", [])
-
-            message = f"Ví của bạn: {wallet_address}\nSố dư TON: {balance} TON\n\nNFT trong ví của bạn:\n"
-            if nfts:
-                for idx, nft in enumerate(nfts):
-                    message += f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})\n"
-                    if nft['animation_url']:
-                        await update.message.reply_animation(
-                            animation=nft['animation_url'],
-                            caption=f"{idx + 1}. {nft['name']} (Bộ sưu tập: {nft['collection_name']})"
-                        )
-                context.user_data["nfts_in_wallet"] = nfts
-                context.user_data["state"] = "selecting_nft_to_list"
-                message += "\nNhập số thứ tự NFT để đăng bán hoặc 'hủy' để thoát:"
-            else:
-                message += "Bạn chưa sở hữu NFT nào."
-            await update.message.reply_text(message, reply_markup=main_menu)
-        else:
-            # Hiển thị nút inline để mở WebApp kết nối ví
-            await update.message.reply_text(
-                "Vui lòng kết nối ví TON của bạn:",
-                reply_markup={
-                    "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
-                    ]]
-                }
-            )
-    elif user_text == "Các NFT đang được bán 📦":
-        if "wallet" not in context.user_data:
-            await update.message.reply_text(
-                "Vui lòng kết nối ví TON trước!",
-                reply_markup={
-                    "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
-                    ]]
-                }
-            )
+        # Gọi API /api/get-nfts để lấy NFT
+        response = requests.post(
+            f"{NETLIFY_API_URL}/api/get-nfts",
+            json={"address": ton_address},
+            headers={"Content-Type": "application/json"}
+        )
+        if response.status_code != 200:
+            await update.message.reply_text("Lỗi khi lấy danh sách NFT. Vui lòng thử lại sau!")
             return
-        wallet_address = context.user_data["wallet"]
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://vinagift.netlify.app/.netlify/functions/get-nfts-for-sale",
-                json={"seller_address": wallet_address}
-            ) as response:
-                data = await response.json()
-                nfts = data.get("nfts", [])
-        if nfts:
-            message = "NFT bạn đang bán:\n"
-            for idx, nft in enumerate(nfts):
-                message += f"{idx + 1}. {nft['name']}: {nft['price']} TON\n"
-                if nft['animation_url']:
-                    await update.message.reply_animation(
-                        animation=nft['animation_url'],
-                        caption=f"{idx + 1}. {nft['name']}: {nft['price']} TON"
-                    )
-            context.user_data["nfts_for_sale"] = nfts
-            context.user_data["state"] = "viewing_nfts_for_sale"
-            message += "\nNhập số thứ tự NFT để xem chi tiết hoặc 'hủy' để thoát:"
-        else:
-            message = "Bạn chưa có NFT nào đang bán."
-        await update.message.reply_text(message, reply_markup=main_menu)
-    elif user_text == "Profile của bạn 👤":
-        if "wallet" not in context.user_data:
-            await update.message.reply_text(
-                "Vui lòng kết nối ví TON trước!",
-                reply_markup={
-                    "inline_keyboard": [[
-                        {"text": "Kết nối ví", "web_app": {"url": "https://vinagift.netlify.app/"}}
-                    ]]
-                }
-            )
+
+        data = response.json()
+        nfts = data.get("nfts", [])
+        
+        if not nfts:
+            await update.message.reply_text("Bạn chưa sở hữu NFT nào!")
             return
-        user_id = str(update.effective_user.id)
-        wallet_address = context.user_data["wallet"]
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://vinagift.netlify.app/.netlify/functions/get-user-nfts",
-                json={"user_id": user_id, "wallet_address": wallet_address}
-            ) as response:
-                data = await response.json()
-                nfts = data.get("nfts", [])
-        if nfts:
-            message = "NFT trong profile của bạn:\n"
-            for idx, nft in enumerate(nfts):
-                message += f"{idx + 1}. {nft['name']}\n"
-                if nft['animation_url']:
-                    await update.message.reply_animation(
-                        animation=nft['animation_url'],
-                        caption=f"{idx + 1}. {nft['name']}"
-                    )
-        else:
-            message = "Bạn chưa có NFT nào trong profile."
-        await update.message.reply_text(message, reply_markup=main_menu)
-    elif user_text == "Cài đặt ⚙️":
-        await update.message.reply_text("Đây là phần cài đặt (chưa triển khai).", reply_markup=main_menu)
-    else:
-        await update.message.reply_text("❓ Mình không hiểu lựa chọn đó. Hãy chọn từ menu.", reply_markup=main_menu)
+
+        # Tạo danh sách NFT
+        nft_list = "\n\n".join([
+            f"📦 *{nft['name']}*\n"
+            f"Mô tả: {nft['description']}\n"
+            f"Hình ảnh: {nft['image']}\n"
+            f"Index: {nft['index']}"
+            for nft in nfts
+        ])
+        await update.message.reply_text(
+            f"Danh sách NFT của bạn:\n\n{nft_list}",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        await update.message.reply_text(f"Lỗi: {str(e)}")
+
+def main() -> None:
+    """Chạy bot"""
+    # Thêm các handler
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("wallet", wallet))
+    application.add_handler(CommandHandler("nfts", nfts))
+
+    # Chạy bot
+    print("Bot is running...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
-    app = ApplicationBuilder().token("7596478230:AAGfbq2dSS_N4rGWfyJ8cYjEfFkEIgzfs4Y").build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    print("Bot đang chạy...")
-    app.run_polling()
+    main()
