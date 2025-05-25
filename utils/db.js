@@ -2,62 +2,75 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-const uri = process.env.MONGODB_URI;
 let client;
+let db;
 
 async function connectDB() {
-  if (!client) {
-    client = new MongoClient(uri);
-    await client.connect();
+  if (db) return db;
+  try {
+    client = await MongoClient.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    db = client.db('vinagift');
+    console.log('Connected to MongoDB');
+    return db;
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
   }
-  return client.db('vinagift');
-}
-
-async function closeDB() {
-  if (client) {
-    await client.close();
-    client = null;
-  }
-}
-
-async function saveNFTMetadata(ownerAddress, metadata) {
-  const db = await connectDB();
-  await db.collection('nfts').insertOne({
-    owner: ownerAddress,
-    name: metadata.name,
-    description: metadata.description,
-    image: metadata.image,
-    attributes: metadata.attributes || [],
-    content_url: metadata.content_url,
-    collection: metadata.collectionAddress,
-    index: metadata.index,
-    created_at: new Date()
-  });
-  await closeDB();
-}
-
-async function getNFTsByOwner(ownerAddress) {
-  const db = await connectDB();
-  const nfts = await db.collection('nfts').find({ owner: ownerAddress }).toArray();
-  await closeDB();
-  return nfts;
-}
-
-async function saveUserMapping(telegramId, tonAddress) {
-  const db = await connectDB();
-  await db.collection('users').updateOne(
-    { telegramId },
-    { $set: { tonAddress, updated_at: new Date() } },
-    { upsert: true }
-  );
-  await closeDB();
 }
 
 async function getUserAddress(telegramId) {
-  const db = await connectDB();
-  const user = await db.collection('users').findOne({ telegramId });
-  await closeDB();
-  return user?.tonAddress;
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ telegramId });
+    return user?.tonAddress;
+  } catch (error) {
+    console.error('Error fetching user address:', error);
+    throw error;
+  }
 }
 
-module.exports = { connectDB, closeDB, saveNFTMetadata, getNFTsByOwner, saveUserMapping, getUserAddress };
+async function getNFTsByOwner(ownerAddress) {
+  try {
+    const db = await connectDB();
+    const nfts = await db.collection('nfts').find({ owner: ownerAddress }).toArray();
+    return nfts;
+  } catch (error) {
+    console.error('Error fetching NFTs:', error);
+    throw error;
+  }
+}
+
+async function saveUserMapping(telegramId, tonAddress) {
+  try {
+    const db = await connectDB();
+    await db.collection('users').updateOne(
+      { telegramId },
+      { $set: { telegramId, tonAddress, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    console.log(`Saved mapping for telegramId: ${telegramId}, tonAddress: ${tonAddress}`);
+  } catch (error) {
+    console.error('Error saving user mapping:', error);
+    throw error;
+  }
+}
+
+async function saveNFTMetadata(nft) {
+  try {
+    const db = await connectDB();
+    await db.collection('nfts').updateOne(
+      { index: nft.index, owner: nft.owner },
+      { $set: { ...nft, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    console.log(`Saved NFT metadata: ${nft.index}`);
+  } catch (error) {
+    console.error('Error saving NFT metadata:', error);
+    throw error;
+  }
+}
+
+module.exports = { connectDB, getUserAddress, getNFTsByOwner, saveUserMapping, saveNFTMetadata };
