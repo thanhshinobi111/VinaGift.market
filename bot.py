@@ -42,7 +42,7 @@ async def nfts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     telegram_id = str(update.effective_user.id)
     
     try:
-        # Lấy TON address từ telegramId (gọi API hoặc MongoDB trực tiếp)
+        # Lấy TON address từ telegramId
         response = requests.post(
             f"{NETLIFY_API_URL}/api/get-user-address",
             json={"telegramId": telegram_id},
@@ -58,7 +58,7 @@ async def nfts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text("Không tìm thấy địa chỉ ví của bạn. Vui lòng kết nối ví trong Mini App!")
             return
 
-        # Gọi API /api/get-nfts để lấy NFT
+        # Gọi API /api/get-nfts
         response = requests.post(
             f"{NETLIFY_API_URL}/api/get-nfts",
             json={"address": ton_address},
@@ -92,12 +92,10 @@ async def nfts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def main() -> None:
     """Chạy bot"""
-    # Thêm các handler
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("wallet", wallet))
     application.add_handler(CommandHandler("nfts", nfts))
 
-    # Chạy bot
     print("Bot is running...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
